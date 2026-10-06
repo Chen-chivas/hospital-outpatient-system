@@ -1,0 +1,39 @@
+# 统一换行符规范 —— 多人协作必加
+# 作用：无论谁在什么系统上克隆，仓库里存的行尾永远一致，
+#       避免"我只改了一行，却显示整个文件都被改了"的假冲突。
+
+# 默认：文本文件在仓库中统一存为 LF
+* text=auto eol=lf
+
+# 明确指定为文本、以 LF 入库的类型
+*.java    text eol=lf
+*.xml     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.properties text eol=lf
+*.sql     text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.ts      text eol=lf
+*.vue     text eol=lf
+*.css     text eol=lf
+*.html    text eol=lf
+
+# Windows 批处理与 PowerShell 脚本必须保持 CRLF，否则在 Windows 上无法执行
+*.cmd     text eol=crlf
+*.bat     text eol=crlf
+*.ps1     text eol=crlf
+
+# 二进制文件：禁止任何换行转换，否则文件会损坏
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.svg     text eol=lf
+*.pdf     binary
+*.docx    binary
+*.pptx    binary
+*.xlsx    binary
+*.jar     binary
+*.mv.db   binary

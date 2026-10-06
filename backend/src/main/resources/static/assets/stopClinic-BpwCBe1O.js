@@ -1,0 +1,1 @@
+import{i as e,n as t}from"./index-DmQacnwT.js";function n(t){return e(`/api/stop-clinic-requests`,t)}function r(){return t(`/api/stop-clinic-requests/my`)}function i(){return t(`/api/stop-clinic-requests/pending`)}function a(t){return e(`/api/stop-clinic-requests/${t}/approve`)}function o(t){return e(`/api/stop-clinic-requests/${t}/reject`)}export{o as a,i,n,r,a as t};

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${schedule.scheduleId == null ? '新增排班' : '编辑排班'}">排班表单</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="mb-4" th:text="${schedule.scheduleId == null ? '📅 新增排班' : '✏️ 编辑排班'}"></h1>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form th:action="@{/admin/schedule/save}" th:object="${schedule}" method="post" id="scheduleForm">
+                        <!-- 隐藏字段 -->
+                        <input type="hidden" th:field="*{scheduleId}">
+                        <input type="hidden" th:field="*{deptId}" id="deptIdHidden">
+
+                        <!-- 医生选择 + 科室自动填入 -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="doctorSelect" class="form-label">
+                                    <i class="bi bi-person-badge"></i> 选择医生 <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="doctorSelect" required
+                                        onchange="onDoctorChange(this)">
+                                    <option value="">-- 请选择医生 --</option>
+                                    <option th:each="doc : ${doctors}"
+                                            th:value="${doc.doctorId}"
+                                            th:attr="data-dept=${doc.deptId}"
+                                            th:text="${doctorNameMap.get(doc.doctorId)} + '（' + ${doc.title} + '）'">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <i class="bi bi-building"></i> 所属科室 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="deptNameDisplay" readonly
+                                       placeholder="选择医生后自动填入">
+                                <div class="form-text">选择医生后自动填入对应科室</div>
+                            </div>
+                        </div>
+
+                        <!-- 就诊日期 -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="scheduleDate" class="form-label">
+                                    <i class="bi bi-calendar-date"></i> 就诊日期 <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" th:field="*{scheduleDate}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <i class="bi bi-info-circle"></i> 排班类型
+                                </label>
+                                <input type="text" class="form-control" value="门诊出诊" readonly>
+                            </div>
+                        </div>
+
+                        <!-- 开始/结束时间 -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="startTime" class="form-label">
+                                    <i class="bi bi-clock"></i> 开始时间 <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" class="form-control" th:field="*{startTime}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="endTime" class="form-label">
+                                    <i class="bi bi-clock-history"></i> 结束时间 <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" class="form-control" th:field="*{endTime}" required>
+                            </div>
+                        </div>
+
+                        <!-- 时段设置 -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="timeSlotDuration" class="form-label">时段时长(分钟)</label>
+                                <input type="number" class="form-control" th:field="*{timeSlotDuration}"
+                                       min="15" max="120" required>
+                                <div class="form-text">如30=每30分钟一个号</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="totalSlots" class="form-label">总时段数</label>
+                                <input type="number" class="form-control" th:field="*{totalSlots}"
+                                       min="1" max="30" required>
+                                <div class="form-text" id="slotHint">如8个时段</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="slotsPerTime" class="form-label">每时段号源数</label>
+                                <input type="number" class="form-control" th:field="*{slotsPerTime}"
+                                       min="1" max="50" required>
+                                <div class="form-text">每时段可挂号人数</div>
+                            </div>
+                        </div>
+
+                        <!-- 费用 + 状态 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="registrationFee" class="form-label">
+                                    <i class="bi bi-cash-coin"></i> 挂号费(元) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" th:field="*{registrationFee}"
+                                       step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">
+                                    <i class="bi bi-toggle-on"></i> 状态
+                                </label>
+                                <select class="form-select" th:field="*{status}" required>
+                                    <option value="1">✅ 正常（患者可见）</option>
+                                    <option value="0">❌ 停用（患者不可见）</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 按钮 -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/admin/schedule" class="btn btn-outline-secondary me-md-2">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 保存排班
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 科室映射（从医生下拉框的data-dept属性构建）
+    const deptMap = {};
+    document.querySelectorAll('#doctorSelect option').forEach(opt => {
+        if (opt.dataset.dept) {
+            deptMap[opt.value] = opt.dataset.dept;
+        }
+    });
+
+    // 科室名称映射
+    const deptNames = {1:'内科', 2:'外科', 3:'儿科', 4:'妇产科', 5:'骨科',
+                       6:'眼科', 7:'皮肤科', 8:'神经内科', 9:'心血管内科', 10:'耳鼻喉科'};
+
+    function onDoctorChange(select) {
+        const doctorId = select.value;
+        const deptIdField = document.getElementById('deptIdHidden');
+        const deptNameField = document.getElementById('deptNameDisplay');
+
+        if (doctorId && deptMap[doctorId]) {
+            deptIdField.value = deptMap[doctorId];
+            deptNameField.value = deptNames[deptMap[doctorId]] || ('科室#' + deptMap[doctorId]);
+        } else {
+            deptIdField.value = '';
+            deptNameField.value = '';
+        }
+    }
+
+    // 页面加载时初始化（编辑模式预填）
+    document.addEventListener('DOMContentLoaded', function() {
+        const deptIdHidden = document.getElementById('deptIdHidden');
+        const doctorSelect = document.getElementById('doctorSelect');
+
+        // 编辑模式：如果已有医生选中，自动设置科室
+        if (doctorSelect.value) {
+            onDoctorChange(doctorSelect);
+        } else if (deptIdHidden.value) {
+            // 有deptId但没选医生（异常情况），手动显示科室名
+            document.getElementById('deptNameDisplay').value =
+                deptNames[deptIdHidden.value] || ('科室#' + deptIdHidden.value);
+        }
+
+        // 表单提交前校验
+        document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+            if (!deptIdHidden.value) {
+                e.preventDefault();
+                alert('请先选择一位医生（科室将自动填入）');
+                return false;
+            }
+        });
+    });
+</script>
+</body>
+</html>

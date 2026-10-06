@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>智慧医疗助手 - 就诊管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background-color: #f5f7fa;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-tab {
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-tab:hover, .nav-tab.active {
+            background: rgba(255,255,255,0.4);
+        }
+
+        .container {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .patient-list {
+            width: 320px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .list-header {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+        }
+
+        .patient-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .patient-item:hover {
+            background: #f0f0f0;
+        }
+
+        .patient-item.selected {
+            background: #e8eaf6;
+            border-left: 3px solid #667eea;
+        }
+
+        .patient-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .patient-complaint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .patient-status {
+            display: inline-block;
+            background: #ff9800;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 5px;
+        }
+
+        .record-area {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+
+        .btn-info {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #3182ce;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .close {
+            float: right;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #48bb78;
+            color: white;
+            border-radius: 5px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .message.error {
+            background: #f56565;
+        }
+
+        .patient-info {
+            background: #f0f4ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .allergy-warning {
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            padding: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .allergy-alert {
+            background: #f56565;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .allergy-safe {
+            background: #48bb78;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .drug-select {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <div class="logo">🏥 智慧医疗助手系统</div>
+    <div class="nav-tabs">
+        <div class="nav-tab active">就诊管理</div>
+        <div class="nav-tab" onclick="location.href='/pharmacy'">药房管理</div>
+        <div class="nav-tab" onclick="location.href='/charge'">收费管理</div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- 左侧患者列表 -->
+    <div class="patient-list">
+        <div class="list-header">📋 待接诊患者列表</div>
+        <div id="patientList">
+            <div th:each="p : ${waitingPatients}" class="patient-item" th:onclick="'selectPatient(this, ' + ${p.id} + ', ' + ${p.patientId} + ')'">
+                <div class="patient-name">患者 ID: <span th:text="${p.patientId}"></span></div>
+                <div class="patient-complaint" th:text="${p.chiefComplaint}"></div>
+                <span class="patient-status" th:text="${p.status}"></span>
+            </div>
+            <div th:if="${waitingPatients.empty}" style="padding:20px;text-align:center;color:#999;">
+                暂无待接诊患者
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧病历编辑区 -->
+    <div class="record-area">
+        <div class="section-title">📝 电子病历编辑</div>
+
+        <div id="patientInfoArea" style="display:none;">
+            <div class="patient-info" id="patientInfo"></div>
+            <div class="allergy-warning" id="allergyInfo"></div>
+        </div>
+
+        <form id="recordForm">
+            <input type="hidden" id="recordId" name="id">
+            <input type="hidden" id="patientId" name="patientId">
+            <input type="hidden" id="doctorId" name="doctorId" value="1">
+
+            <div class="form-group">
+                <label>主诉 <span style="color:red">*</span></label>
+                <textarea id="chiefComplaint" name="chiefComplaint" rows="2" placeholder="患者主诉..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>现病史</label>
+                <textarea id="presentIllness" name="presentIllness" rows="3" placeholder="现病史..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>体格检查</label>
+                <textarea id="physicalExam" name="physicalExam" rows="2" placeholder="体格检查..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>诊断</label>
+                <input type="text" id="diagnosis" name="diagnosis" placeholder="诊断结果">
+            </div>
+
+            <div class="form-group">
+                <label>ICD-10编码</label>
+                <input type="text" id="diagnosisCode" name="diagnosisCode" placeholder="ICD-10编码">
+            </div>
+        </form>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="saveRecord()">💾 保存病历</button>
+            <button class="btn btn-success" onclick="openPrescriptionModal()">💊 开具处方</button>
+            <button class="btn btn-info" onclick="viewHistory()">📋 历史病历</button>
+            <button class="btn btn-warning" onclick="getAIDiagnosis()">🤖 AI辅助诊断</button>
+        </div>
+    </div>
+</div>
+
+<!-- 处方模态框 -->
+<div id="prescriptionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            开具处方
+            <span class="close" onclick="closePrescriptionModal()">&times;</span>
+        </div>
+
+        <div id="patientAllergyInfo" style="background:#f0f4ff; padding:10px; border-radius:5px; margin-bottom:15px; font-size:13px;">
+            <!-- 动态显示患者过敏史 -->
+        </div>
+
+        <div class="form-group">
+            <label>药品名称</label>
+            <select id="drugName" class="drug-select" onchange="checkAllergyRealtime()">
+                <option value="阿莫西林胶囊">阿莫西林胶囊 (青霉素类)</option>
+                <option value="布洛芬缓释胶囊">布洛芬缓释胶囊</option>
+                <option value="头孢克肟片">头孢克肟片</option>
+            </select>
+
+            <div id="allergyWarning" style="display:none; margin-top:8px; padding:10px; background:#f56565; color:white; border-radius:5px;">
+                ⚠️ 患者对此药品有过敏史，请更换药品
+            </div>
+            <div id="allergySafe" style="display:none; margin-top:8px; padding:10px; background:#48bb78; color:white; border-radius:5px;">
+                ✅ 患者无过敏史，可以使用
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>规格</label>
+            <input type="text" id="specification" placeholder="如：0.5g*20粒">
+        </div>
+        <div class="form-group">
+            <label>数量</label>
+            <input type="number" id="quantity" value="1" min="1" onchange="calculateTotal()">
+        </div>
+        <div class="form-group">
+            <label>用法</label>
+            <input type="text" id="usageDesc" placeholder="如：口服，每日3次">
+        </div>
+        <div class="form-group">
+            <label>用量</label>
+            <input type="text" id="dosage" placeholder="如：每次1粒">
+        </div>
+        <div class="form-group">
+            <label>疗程（天）</label>
+            <input type="number" id="duration" value="3" min="1">
+        </div>
+        <div class="form-group">
+            <label>总金额</label>
+            <input type="text" id="totalAmountDisplay" readonly style="background:#f5f7fa; font-weight:bold;">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" id="submitPresBtn" onclick="submitPrescription()">提交处方</button>
+            <button class="btn btn-info" onclick="checkAllergyManual()">🔍 检查过敏史</button>
+            <button class="btn btn-warning" onclick="closePrescriptionModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 历史病历模态框 -->
+<div id="historyModal" class="modal">
+    <div class="modal-content" style="width:600px;">
+        <div class="modal-header">
+            历史病历
+            <span class="close" onclick="closeHistoryModal()">&times;</span>
+        </div>
+        <div id="historyContent" style="max-height:400px;overflow-y:auto;">
+            <p style="color:#999;text-align:center;">暂无历史病历</p>
+        </div>
+    </div>
+</div>
+
+<div id="message" class="message"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    var currentPatientId = null;
+    var currentRecordId = null;
+    var currentPatientAllergy = null;
+
+    // 选择患者
+    function selectPatient(element, recordId, patientId) {
+        document.querySelectorAll('.patient-item').forEach(function(item) {
+            item.classList.remove('selected');
+        });
+        element.classList.add('selected');
+
+        currentPatientId = patientId;
+        currentRecordId = recordId;
+        document.getElementById('patientId').value = patientId;
+
+        loadPatientInfo(patientId);
+
+        document.getElementById('chiefComplaint').value = '';
+        document.getElementById('presentIllness').value = '';
+        document.getElementById('physicalExam').value = '';
+        document.getElementById('diagnosis').value = '';
+        document.getElementById('diagnosisCode').value = '';
+
+        showMessage('已选择患者，请填写病历', 'success');
+    }
+
+    // 加载患者信息
+    function loadPatientInfo(patientId) {
+        $.ajax({
+            url: '/api/patient/' + patientId,
+            type: 'GET',
+            success: function(patient) {
+                currentPatientAllergy = patient.allergyHistory;
+                var infoHtml = '<strong>患者姓名：</strong>' + (patient.name || '未知') + '<br>';
+                infoHtml += '<strong>性别：</strong>' + (patient.gender || '未知') + '<br>';
+                infoHtml += '<strong>联系电话：</strong>' + (patient.phone || '无') + '<br>';
+                infoHtml += '<strong>出生日期：</strong>' + (patient.birthday || '未知');
+                document.getElementById('patientInfo').innerHTML = infoHtml;
+
+                var allergyHtml = '';
+                if (patient.allergyHistory && patient.allergyHistory !== '无') {
+                    allergyHtml = '<strong>⚠️ 过敏史提醒：</strong> ' + patient.allergyHistory;
+                } else {
+                    allergyHtml = '<strong>✅ 过敏史：</strong> 无已知过敏';
+                }
+                document.getElementById('allergyInfo').innerHTML = allergyHtml;
+                document.getElementById('patientInfoArea').style.display = 'block';
+            }
+        });
+    }
+
+    // 保存病历
+    function saveRecord() {
+        if (!currentPatientId) {
+            showMessage('请先选择患者', 'error');
+            return;
+        }
+
+        var record = {
+            patientId: currentPatientId,
+            doctorId: 1,
+            chiefComplaint: document.getElementById('chiefComplaint').value,
+            presentIllness: document.getElementById('presentIllness').value,
+            physicalExam: document.getElementById('physicalExam').value,
+            diagnosis: document.getElementById('diagnosis').value,
+            diagnosisCode: document.getElementById('diagnosisCode').value,
+            status: '已完成'
+        };
+
+        $.ajax({
+            url: '/api/record/save',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(record),
+            success: function(response) {
+                if (response.success) {
+                    showMessage(response.message, 'success');
+                    if (response.data && response.data.id) {
+                        currentRecordId = response.data.id;
+                    }
+                } else {
+                    showMessage(response.message, 'error');
+                }
+            },
+            error: function() {
+                showMessage('保存失败，请稍后重试', 'error');
+            }
+        });
+    }
+
+    // 打开处方模态框
+    function openPrescriptionModal() {
+        if (!currentPatientId) {
+            showMessage('请先选择患者', 'error');
+            return;
+        }
+
+        loadPatientAllergyInfo();
+
+        document.getElementById('allergyWarning').style.display = 'none';
+        document.getElementById('allergySafe').style.display = 'none';
+        document.getElementById('prescriptionModal').style.display = 'block';
+
+        setTimeout(checkAllergyRealtime, 100);
+        calculateTotal();
+    }
+
+    // 关闭处方模态框
+    function closePrescriptionModal() {
+        document.getElementById('prescriptionModal').style.display = 'none';
+        document.getElementById('specification').value = '';
+        document.getElementById('usageDesc').value = '';
+        document.getElementById('dosage').value = '';
+        document.getElementById('quantity').value = 1;
+    }
+
+    // 加载患者过敏史信息
+    function loadPatientAllergyInfo() {
+        $.ajax({
+            url: '/api/patient/' + currentPatientId,
+            type: 'GET',
+            success: function(patient) {
+                var allergyText = (patient.allergyHistory && patient.allergyHistory !== '无')
+                    ? '⚠️ 过敏史：' + patient.allergyHistory
+                    : '✅ 过敏史：无';
+                document.getElementById('patientAllergyInfo').innerHTML =
+                    '<strong>患者：</strong>' + (patient.name || '未知') + ' | ' + allergyText;
+            }
+        });
+    }
+
+    // 实时检查过敏史
+    function checkAllergyRealtime() {
+        if (!currentPatientId) return;
+
+        var drugName = document.getElementById('drugName').value;
+        var submitBtn = document.getElementById('submitPresBtn');
+
+        $.ajax({
+            url: '/api/check-allergy',
+            type: 'GET',
+            data: { patientId: currentPatientId, drugName: drugName },
+            success: function(response) {
+                var warningDiv = document.getElementById('allergyWarning');
+                var safeDiv = document.getElementById('allergySafe');
+
+                if (response.hasAllergy) {
+                    warningDiv.style.display = 'block';
+                    safeDiv.style.display = 'none';
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                } else {
+                    warningDiv.style.display = 'none';
+                    safeDiv.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                }
+            }
+        });
+    }
+
+    // 手动检查过敏史
+    function checkAllergyManual() {
+        if (!currentPatientId) return;
+        var drugName = document.getElementById('drugName').value;
+
+        $.ajax({
+            url: '/api/check-allergy',
+            type: 'GET',
+            data: { patientId: currentPatientId, drugName: drugName },
+            success: function(response) {
+                if (response.hasAllergy) {
+                    showMessage(response.message, 'error');
+                } else {
+                    showMessage(response.message, 'success');
+                }
+            }
+        });
+    }
+
+    // 提交处方
+    function submitPrescription() {
+        var submitBtn = document.getElementById('submitPresBtn');
+        if (submitBtn.disabled) {
+            showMessage('当前药品患者有过敏史，请更换药品', 'error');
+            return;
+        }
+
+        var prescription = {
+            medicalRecordId: currentRecordId,
+            patientId: currentPatientId,
+            doctorId: 1,
+            drugName: document.getElementById('drugName').value,
+            specification: document.getElementById('specification').value,
+            quantity: parseInt(document.getElementById('quantity').value),
+            usageDesc: document.getElementById('usageDesc').value,
+            dosage: document.getElementById('dosage').value,
+            duration: parseInt(document.getElementById('duration').value),
+            unitPrice: 25.00,
+            totalAmount: 25.00 * parseInt(document.getElementById('quantity').value)
+        };
+
+        $.ajax({
+            url: '/api/prescription/create',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(prescription),
+            success: function(response) {
+                if (response.success) {
+                    showMessage(response.message, 'success');
+                    closePrescriptionModal();
+                } else {
+                    showMessage(response.message, 'error');
+                }
+            },
+            error: function() {
+                showMessage('提交失败，请稍后重试', 'error');
+            }
+        });
+    }
+
+    // 计算总金额
+    function calculateTotal() {
+        var quantity = parseInt(document.getElementById('quantity').value) || 1;
+        var unitPrice = 25.00;
+        var total = quantity * unitPrice;
+        document.getElementById('totalAmountDisplay').value = '¥' + total.toFixed(2);
+    }
+
+    // AI辅助诊断
+    function getAIDiagnosis() {
+        if (!currentPatientId) {
+            showMessage('请先选择患者', 'error');
+            return;
+        }
+
+        var chiefComplaint = document.getElementById('chiefComplaint').value;
+        if (!chiefComplaint) {
+            showMessage('请先填写主诉', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/ai-diagnosis/1',
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var suggestions = response.suggestions;
+                    var msg = '🤖 AI诊断建议：\n';
+                    for (var i = 0; i < suggestions.length; i++) {
+                        msg += '\n' + (i+1) + '. ' + suggestions[i].disease + ' (置信度: ' + suggestions[i].confidence + '%)\n';
+                        msg += '   💡 ' + suggestions[i].suggestion + '\n';
+                    }
+                    alert(msg);
+                }
+            },
+            error: function() {
+                showMessage('AI诊断失败', 'error');
+            }
+        });
+    }
+
+    // 查看历史病历
+    function viewHistory() {
+        if (!currentPatientId) {
+            showMessage('请先选择患者', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/patient-history/' + currentPatientId,
+            type: 'GET',
+            success: function(history) {
+                var content = '';
+                if (history && history.length > 0) {
+                    for (var i = 0; i < history.length; i++) {
+                        var h = history[i];
+                        content += '<div style="border-bottom:1px solid #eee; padding:10px; margin-bottom:10px;">';
+                        content += '<div><strong>📅 就诊时间：</strong>' + (h.recordTime || '未知') + '</div>';
+                        content += '<div><strong>📝 主诉：</strong>' + (h.chiefComplaint || '无') + '</div>';
+                        content += '<div><strong>💊 诊断：</strong>' + (h.diagnosis || '无') + '</div>';
+                        content += '<div><strong>🔢 ICD-10：</strong>' + (h.diagnosisCode || '无') + '</div>';
+                        content += '</div>';
+                    }
+                } else {
+                    content = '<p style="color:#999;text-align:center;">暂无历史病历记录</p>';
+                }
+                document.getElementById('historyContent').innerHTML = content;
+                document.getElementById('historyModal').style.display = 'block';
+            },
+            error: function() {
+                showMessage('加载历史病历失败', 'error');
+            }
+        });
+    }
+
+    function closeHistoryModal() {
+        document.getElementById('historyModal').style.display = 'none';
+    }
+
+    function showMessage(msg, type) {
+        var msgDiv = document.getElementById('message');
+        msgDiv.textContent = msg;
+        msgDiv.className = 'message';
+        if (type === 'error') {
+            msgDiv.classList.add('error');
+        }
+        msgDiv.style.display = 'block';
+        setTimeout(function() {
+            msgDiv.style.display = 'none';
+        }, 3000);
+    }
+
+    window.onclick = function(event) {
+        var modal1 = document.getElementById('prescriptionModal');
+        var modal2 = document.getElementById('historyModal');
+        if (event.target == modal1) {
+            modal1.style.display = "none";
+        }
+        if (event.target == modal2) {
+            modal2.style.display = "none";
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>智慧医疗助手 - 药房管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background-color: #f5f7fa; }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-size: 24px; font-weight: bold; }
+        .nav-tabs { display: flex; gap: 10px; }
+        .nav-tab {
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .nav-tab:hover, .nav-tab.active { background: rgba(255,255,255,0.4); }
+        .container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card-header {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .card-header.warning { background: #f56565; }
+        .card-header.success { background: #48bb78; }
+        .card-body { padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f5f7fa; }
+        .btn {
+            padding: 6px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            margin: 2px;
+        }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-danger { background: #f56565; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        .badge-warning { background: #ed8936; color: white; }
+        .badge-success { background: #48bb78; color: white; }
+        .badge-danger { background: #f56565; color: white; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 400px;
+        }
+        .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+        .close { float: right; cursor: pointer; font-size: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+        .message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #48bb78;
+            color: white;
+            border-radius: 5px;
+            display: none;
+            z-index: 1001;
+        }
+        .message.error { background: #f56565; }
+        .text-danger { color: #f56565; font-weight: bold; }
+        .text-success { color: #48bb78; font-weight: bold; }
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <div class="logo">🏥 智慧医疗助手系统</div>
+    <div class="nav-tabs">
+        <div class="nav-tab" onclick="location.href='/smart'">就诊管理</div>
+        <div class="nav-tab active" onclick="location.href='/smart/pharmacy'">药房管理</div>
+        <div class="nav-tab" onclick="location.href='/smart/charge'">收费管理</div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- 待审核处方 -->
+    <div class="card">
+        <div class="card-header">📋 待审核处方列表</div>
+        <div class="card-body">
+            <table id="pendingTable">
+                <thead>
+                <tr><th>处方编号</th><th>患者ID</th><th>药品名称</th><th>数量</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody id="pendingBody">
+                <tr th:each="p : ${pendingPrescriptions}">
+                    <td th:text="${p.prescriptionNo}">-</td>
+                    <td th:text="${p.patientId}">-</td>
+                    <td th:text="${p.drugName}">-</td>
+                    <td th:text="${p.quantity}">-</td>
+                    <td><span class="badge badge-warning" th:text="${p.status}">待审核</span></td>
+                    <td>
+                        <button class="btn btn-success" th:onclick="'audit(' + ${p.id} + ', true)'">✅ 通过</button>
+                        <button class="btn btn-danger" th:onclick="'showRejectModal(' + ${p.id} + ')'">❌ 驳回</button>
+                    </td>
+                </tr>
+                <tr th:if="${pendingPrescriptions.empty}"><td colspan="6" style="text-align:center;">暂无待审核处方</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 待发药处方 -->
+    <div class="card">
+        <div class="card-header success">💊 待发药处方列表</div>
+        <div class="card-body">
+            <table>
+                <thead><tr><th>处方编号</th><th>患者ID</th><th>药品名称</th><th>数量</th><th>操作</th></tr></thead>
+                <tbody id="dispenseBody">
+                <tr th:each="p : ${pendingDispense}">
+                    <td th:text="${p.prescriptionNo}">-</td>
+                    <td th:text="${p.patientId}">-</td>
+                    <td th:text="${p.drugName}">-</td>
+                    <td th:text="${p.quantity}">-</td>
+                    <td><button class="btn btn-success" th:onclick="'dispense(' + ${p.id} + ')'">✅ 确认发药</button></td>
+                </tr>
+                <tr th:if="${pendingDispense.empty}"><td colspan="5" style="text-align:center;">暂无待发药处方</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 库存预警 - 修复判断逻辑 -->
+    <div class="card">
+        <div class="card-header warning">⚠️ 库存预警（仅显示当前库存 < 最低库存的药品）</div>
+        <div class="card-body">
+            <table>
+                <thead>
+                <tr><th>药品名称</th><th>当前库存</th><th>最低库存</th><th>状态</th></tr>
+                </thead>
+                <tbody>
+                <!-- 使用th:if判断是否真的库存不足 -->
+                <tr th:each="w : ${warnings}" th:if="${w.currentStock < w.minStock}">
+                    <td th:text="${w.drugName}">-</td>
+                    <td class="text-danger" th:text="${w.currentStock}">-</td>
+                    <td th:text="${w.minStock}">-</td>
+                    <td><span class="badge badge-danger">⚠️ 库存不足</span></td>
+                </tr>
+                <tr th:if="${warnings.empty or #lists.isEmpty(warnings)}">
+                    <td colspan="4" style="text-align:center;color:#48bb78;">✅ 所有药品库存充足</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 药品库存列表 -->
+    <div class="card">
+        <div class="card-header">📦 药品库存列表</div>
+        <div class="card-body">
+            <table>
+                <thead><tr><th>药品编码</th><th>药品名称</th><th>规格</th><th>当前库存</th><th>最低库存</th><th>零售价</th><th>货位</th></tr></thead>
+                <tbody>
+                <tr th:each="d : ${drugs}">
+                    <td th:text="${d.drugCode}">-</td>
+                    <td th:text="${d.drugName}">-</td>
+                    <td th:text="${d.specification}">-</td>
+                    <td th:classappend="${d.currentStock < d.minStock} ? 'text-danger' : 'text-success'" th:text="${d.currentStock}">-</td>
+                    <td th:text="${d.minStock}">-</td>
+                    <td th:text="${d.retailPrice}">-</td>
+                    <td th:text="${d.location}">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 驳回模态框 -->
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">驳回处方<span class="close" onclick="closeRejectModal()">&times;</span></div>
+        <div class="form-group"><label>驳回原因</label><textarea id="rejectReason" rows="3" placeholder="请输入驳回原因..."></textarea></div>
+        <div class="btn-group"><button class="btn btn-danger" onclick="submitReject()">确认驳回</button><button class="btn btn-info" onclick="closeRejectModal()">取消</button></div>
+    </div>
+</div>
+
+<div id="message" class="message"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    var currentId = null;
+
+    function audit(id, approved) {
+        $.ajax({
+            url: '/smart/api/pharmacy/audit',
+            type: 'POST',
+            data: { id: id, approved: approved, rejectReason: '' },
+            success: function(res) {
+                showMessage(res.message, res.success ? 'success' : 'error');
+                if (res.success) setTimeout(function() { location.reload(); }, 1000);
+            },
+            error: function() { showMessage('操作失败', 'error'); }
+        });
+    }
+
+    function dispense(id) {
+        $.ajax({
+            url: '/smart/api/pharmacy/dispense',
+            type: 'POST',
+            data: { id: id, pharmacistId: 1 },
+            success: function(res) {
+                showMessage(res.message, res.success ? 'success' : 'error');
+                if (res.success) setTimeout(function() { location.reload(); }, 1000);
+            },
+            error: function() { showMessage('发药失败', 'error'); }
+        });
+    }
+
+    function showRejectModal(id) { currentId = id; $('#rejectModal').show(); }
+    function closeRejectModal() { $('#rejectModal').hide(); $('#rejectReason').val(''); }
+    function submitReject() {
+        var reason = $('#rejectReason').val();
+        if (!reason) { showMessage('请填写驳回原因', 'error'); return; }
+        $.ajax({
+            url: '/smart/api/pharmacy/audit',
+            type: 'POST',
+            data: { id: currentId, approved: false, rejectReason: reason },
+            success: function(res) {
+                showMessage(res.message, 'error');
+                closeRejectModal();
+                setTimeout(function() { location.reload(); }, 1000);
+            }
+        });
+    }
+
+    function showMessage(msg, type) {
+        var msgDiv = $('#message');
+        msgDiv.text(msg).removeClass('error').addClass(type === 'error' ? 'error' : '');
+        msgDiv.show();
+        setTimeout(function() { msgDiv.fadeOut(); }, 2000);
+    }
+
+    window.onclick = function(e) { if (e.target == $('#rejectModal')[0]) closeRejectModal(); }
+</script>
+</body>
+</html>

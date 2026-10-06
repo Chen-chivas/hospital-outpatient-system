@@ -1,0 +1,1 @@
+import{a as e,i as t,n}from"./index-DmQacnwT.js";function r(e){return t(`/api/visits/start`,{registrationOrderId:e})}function i(t,n){return e(`/api/visits/${t}/emr`,n)}function a(e,n){return t(`/api/visits/${e}/prescription`,{items:n})}function o(){return n(`/api/visits/my`)}export{i,o as n,r,a as t};

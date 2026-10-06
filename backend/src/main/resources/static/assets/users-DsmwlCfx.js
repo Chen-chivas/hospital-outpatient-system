@@ -1,0 +1,1 @@
+import{i as e,n as t,r as n}from"./index-DmQacnwT.js";function r(){return t(`/api/users`)}function i(t){return e(`/api/users`,t)}function a(e,t){return n(`/api/users/${e}/status`,{status:t})}function o(t,n){return e(`/api/users/${t}/reset-password`,{newPassword:n})}export{a as i,r as n,o as r,i as t};

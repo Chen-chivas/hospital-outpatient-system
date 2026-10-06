@@ -1,0 +1,1 @@
+import{i as e,n as t}from"./index-DmQacnwT.js";function n(){return t(`/api/drugs`)}function r(e){return t(`/api/inventory/${e}`)}function i(t){return e(`/api/inventory/adjust`,t)}function a(){return t(`/api/prescriptions`)}function o(e){return t(`/api/prescriptions/${e}`)}function s(t){return e(`/api/pharmacy/dispense`,{prescriptionId:t})}export{a,n as i,s as n,o,r,i as t};

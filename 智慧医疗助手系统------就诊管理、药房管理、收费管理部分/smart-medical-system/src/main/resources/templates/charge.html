@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>智慧医疗助手 - 收费管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background-color: #f5f7fa; }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-size: 24px; font-weight: bold; }
+        .nav-tabs { display: flex; gap: 10px; }
+        .nav-tab {
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .nav-tab:hover, .nav-tab.active { background: rgba(255,255,255,0.4); }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 20px; }
+        .card-header { background: #667eea; color: white; padding: 15px 20px; font-size: 18px; font-weight: bold; }
+        .card-body { padding: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .btn { padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; }
+        .btn-warning { background: #ed8936; color: white; }
+        .btn-danger { background: #f56565; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .info-box { background: #f5f7fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+        .info-row:last-child { border-bottom: none; }
+        .total-amount { font-size: 28px; font-weight: bold; color: #667eea; }
+        .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .stat-number { font-size: 36px; font-weight: bold; }
+        .stat-label { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        .payment-buttons { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        .payment-btn { flex: 1; padding: 12px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; transition: all 0.3s; min-width: 80px; }
+        .payment-btn:hover { background: #667eea; color: white; border-color: #667eea; }
+        .payment-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .message { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 5px; display: none; z-index: 1001; color: white; }
+        .message.success { background: #48bb78; }
+        .message.error { background: #f56565; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-paid { background: #48bb78; color: white; }
+        .status-pending { background: #ed8936; color: white; }
+        .status-refunded { background: #a0aec0; color: white; }
+        .refund-area { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; }
+        .prescription-info {
+            background: #e8eaf6;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .no-order-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            text-align: center;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <div class="logo">🏥 智慧医疗助手系统</div>
+    <div class="nav-tabs">
+        <div class="nav-tab" onclick="location.href='/'">就诊管理</div>
+        <div class="nav-tab" onclick="location.href='/pharmacy'">药房管理</div>
+        <div class="nav-tab active" onclick="location.href='/charge'">收费管理</div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="stat-box">
+        <div class="stat-number" id="todayIncome">¥0</div>
+        <div class="stat-label">今日收入</div>
+        <div class="stat-number" id="todayCount" style="font-size:20px; margin-top:10px;">0 笔</div>
+        <div class="stat-label">今日结算单数</div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">💰 费用结算</div>
+        <div class="card-body">
+            <div class="form-group">
+                <label>患者ID / 病历号</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="patientId" placeholder="请输入患者ID" style="flex: 1;">
+                    <button class="btn btn-primary" onclick="loadCharges()">🔍 查询</button>
+                </div>
+                <div class="prescription-info" id="prescriptionInfo" style="display:none; margin-top:10px;">
+                    💊 该患者有待支付处方，费用已自动关联
+                </div>
+            </div>
+
+            <div id="noOrderInfo" style="display:none;" class="no-order-info">
+                ⚠️ 该患者暂无待结算的处方<br>
+                请先在【就诊管理】中为该患者开具处方
+            </div>
+
+            <div id="chargeInfo" style="display: none;">
+                <div class="info-box">
+                    <div class="info-row"><span>结算单号：</span><span id="chargeNo">-</span></div>
+                    <div class="info-row"><span>患者姓名：</span><span id="patientName">-</span></div>
+                    <div class="info-row"><span>总金额：</span><span id="totalAmount" class="total-amount">¥0.00</span></div>
+                    <div class="info-row"><span>订单状态：</span><span id="orderStatus" class="status-badge status-pending">待支付</span></div>
+                </div>
+
+                <div id="paymentArea">
+                    <div class="form-group">
+                        <label>医保类型</label>
+                        <select id="insuranceType" onchange="insuranceCalc()">
+                            <option value="职工医保">🏥 职工医保（报销85%）</option>
+                            <option value="居民医保">🏡 居民医保（报销70%）</option>
+                            <option value="新农合">🌾 新农合（报销60%）</option>
+                            <option value="自费">💳 自费（无报销）</option>
+                        </select>
+                    </div>
+
+                    <div class="info-box">
+                        <div class="info-row"><span>医保统筹支付：</span><span id="insuranceAmount" style="color: #48bb78; font-weight: bold;">¥0.00</span></div>
+                        <div class="info-row"><span>个人自付金额：</span><span id="selfPay" style="color: #f56565; font-weight: bold;">¥0.00</span></div>
+                    </div>
+
+                    <div class="payment-buttons">
+                        <button class="payment-btn" onclick="pay('现金')" id="payCashBtn">💵 现金支付</button>
+                        <button class="payment-btn" onclick="pay('微信')" id="payWechatBtn">💚 微信支付</button>
+                        <button class="payment-btn" onclick="pay('支付宝')" id="payAlipayBtn">💙 支付宝支付</button>
+                        <button class="payment-btn" onclick="pay('医保卡')" id="payCardBtn">💳 医保卡支付</button>
+                    </div>
+                </div>
+
+                <div class="refund-area" id="refundArea" style="display: none;">
+                    <button class="btn btn-danger" onclick="showRefundModal()">↩️ 申请退费</button>
+                    <p style="font-size: 12px; color: #999; margin-top: 10px;">提示：退费需要经过医生确认</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 退费模态框 - 文本域不可拖动 -->
+<div id="refundModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:20px; border-radius:10px; width:400px;">
+        <div style="font-size:18px; font-weight:bold; margin-bottom:15px;">退费申请</div>
+        <div class="form-group">
+            <label>退费原因</label>
+            <select id="refundReasonSelect" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                <option value="药品不良反应">药品不良反应</option>
+                <option value="医生建议退费">医生建议退费</option>
+                <option value="患者要求退费">患者要求退费</option>
+                <option value="重复缴费">重复缴费</option>
+                <option value="其他原因">其他原因</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>详细说明</label>
+            <textarea id="refundDetail" rows="3" placeholder="请输入详细说明..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; resize: none;"></textarea>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-danger" onclick="submitRefund()">确认退费</button>
+            <button class="btn btn-info" onclick="closeRefundModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<div id="message" class="message"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    var currentCharge = null;
+
+    function loadTodayIncome() {
+        $.ajax({
+            url: '/api/charge/today-income',
+            type: 'GET',
+            success: function(res) {
+                if (res.success) {
+                    $('#todayIncome').text('¥' + (res.todayIncome || 0).toFixed(2));
+                    $('#todayCount').text((res.todayCount || 0) + ' 笔');
+                }
+            }
+        });
+    }
+
+    function loadCharges() {
+        var patientId = $('#patientId').val();
+        if (!patientId) {
+            showMessage('请输入患者ID', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/charge/pending',
+            type: 'GET',
+            data: { patientId: patientId },
+            success: function(res) {
+                if (res.success && res.data && res.data.length > 0) {
+                    currentCharge = res.data[0];
+                    displayCharge(currentCharge);
+                    $('#chargeInfo').show();
+                    $('#noOrderInfo').hide();
+                    $('#prescriptionInfo').show();
+                    if (currentCharge.status === '已支付') {
+                        showPaidView();
+                    } else {
+                        showPendingView();
+                        insuranceCalc();
+                    }
+                } else {
+                    checkAndCreateCharge(patientId);
+                }
+            },
+            error: function() { showMessage('查询失败', 'error'); }
+        });
+    }
+
+    function checkAndCreateCharge(patientId) {
+        $.ajax({
+            url: '/api/charge/create',
+            type: 'POST',
+            data: { patientId: patientId },
+            success: function(res) {
+                if (res.success) {
+                    currentCharge = res.data;
+                    displayCharge(currentCharge);
+                    $('#chargeInfo').show();
+                    $('#noOrderInfo').hide();
+                    $('#prescriptionInfo').show();
+                    showPendingView();
+                    insuranceCalc();
+                    showMessage('已创建结算单，金额关联处方', 'success');
+                } else {
+                    $('#chargeInfo').hide();
+                    $('#noOrderInfo').show();
+                    $('#prescriptionInfo').hide();
+                    showMessage(res.message, 'error');
+                }
+            }
+        });
+    }
+
+    function displayCharge(charge) {
+        $('#chargeNo').text(charge.chargeNo);
+        $('#patientName').text(charge.patientName || '患者' + charge.patientId);
+        $('#totalAmount').text('¥' + (charge.totalAmount || 0).toFixed(2));
+
+        if (charge.status === '已支付') {
+            $('#orderStatus').text('已支付').removeClass('status-pending').addClass('status-paid');
+        } else if (charge.status === '已退费') {
+            $('#orderStatus').text('已退费').removeClass('status-pending').addClass('status-refunded');
+        } else {
+            $('#orderStatus').text('待支付').removeClass('status-paid').addClass('status-pending');
+        }
+    }
+
+    function showPendingView() {
+        $('#paymentArea').show();
+        $('#refundArea').hide();
+        $('.payment-btn').prop('disabled', false);
+    }
+
+    function showPaidView() {
+        $('#paymentArea').hide();
+        $('#refundArea').show();
+    }
+
+    function insuranceCalc() {
+        if (!currentCharge) return;
+        var total = currentCharge.totalAmount;
+        var insuranceType = $('#insuranceType').val();
+
+        $.ajax({
+            url: '/api/charge/insurance',
+            type: 'POST',
+            data: { totalAmount: total, insuranceType: insuranceType },
+            success: function(res) {
+                if (res.success) {
+                    $('#insuranceAmount').text('¥' + (res.insuranceAmount || 0).toFixed(2));
+                    $('#selfPay').text('¥' + (res.selfPay || total).toFixed(2));
+                    currentCharge.insuranceAmount = res.insuranceAmount;
+                    currentCharge.selfPay = res.selfPay;
+                }
+            }
+        });
+    }
+
+    function pay(method) {
+        if (!currentCharge) { showMessage('请先查询患者费用', 'error'); return; }
+        if (currentCharge.status === '已支付') { showMessage('该订单已支付', 'error'); return; }
+
+        $('.payment-btn').prop('disabled', true);
+
+        $.ajax({
+            url: '/api/charge/pay',
+            type: 'POST',
+            data: {
+                id: currentCharge.id,
+                paymentMethod: method,
+                insuranceAmount: currentCharge.insuranceAmount || 0,
+                selfPay: currentCharge.selfPay || currentCharge.totalAmount
+            },
+            success: function(res) {
+                if (res.success) {
+                    showMessage('✅ 支付成功！发票号：' + res.invoiceNo, 'success');
+                    currentCharge.status = '已支付';
+                    currentCharge.invoiceNo = res.invoiceNo;
+                    displayCharge(currentCharge);
+                    showPaidView();
+                    loadTodayIncome();
+                } else {
+                    showMessage(res.message, 'error');
+                    $('.payment-btn').prop('disabled', false);
+                }
+            },
+            error: function() {
+                showMessage('支付失败', 'error');
+                $('.payment-btn').prop('disabled', false);
+            }
+        });
+    }
+
+    function showRefundModal() {
+        if (!currentCharge) { showMessage('请先查询费用', 'error'); return; }
+        if (currentCharge.status !== '已支付') { showMessage('只有已支付的订单才能退费', 'error'); return; }
+        $('#refundModal').show();
+    }
+
+    function closeRefundModal() {
+        $('#refundModal').hide();
+        $('#refundDetail').val('');
+    }
+
+    function submitRefund() {
+        var reason = $('#refundReasonSelect').val();
+        var detail = $('#refundDetail').val();
+        var fullReason = reason + (detail ? ' - ' + detail : '');
+
+        if (!fullReason) { showMessage('请填写退费原因', 'error'); return; }
+
+        $.ajax({
+            url: '/api/charge/refund',
+            type: 'POST',
+            data: { id: currentCharge.id, refundReason: fullReason },
+            success: function(res) {
+                if (res.success) {
+                    showMessage('✅ 退费申请已提交，款项将原路返回', 'success');
+                    currentCharge.status = '已退费';
+                    displayCharge(currentCharge);
+                    closeRefundModal();
+                    loadTodayIncome();
+                    $('#paymentArea').hide();
+                    $('#refundArea').hide();
+                } else {
+                    showMessage(res.message, 'error');
+                }
+            }
+        });
+    }
+
+    function showMessage(msg, type) {
+        var msgDiv = $('#message');
+        msgDiv.text(msg).removeClass('success error').addClass(type);
+        msgDiv.show();
+        setTimeout(function() { msgDiv.fadeOut(); }, 3000);
+    }
+
+    $(document).ready(function() { loadTodayIncome(); });
+</script>
+</body>
+</html>

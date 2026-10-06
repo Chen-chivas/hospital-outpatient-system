@@ -1,0 +1,296 @@
+﻿-- 一.创建数据库
+CREATE DATABASE smart_medical;
+GO
+
+USE smart_medical;
+GO
+
+-- 1. 患者表
+CREATE TABLE patient (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    patient_no NVARCHAR(20) UNIQUE NOT NULL,
+    name NVARCHAR(50) NOT NULL,
+    gender NVARCHAR(10),
+    birthday DATE,
+    phone NVARCHAR(20),
+    id_card NVARCHAR(18),
+    allergy_history NVARCHAR(MAX),
+    created_time DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 2. 医生表
+CREATE TABLE doctor (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    doctor_no NVARCHAR(20) UNIQUE NOT NULL,
+    name NVARCHAR(50) NOT NULL,
+    department NVARCHAR(100),
+    title NVARCHAR(50),
+    phone NVARCHAR(20),
+    created_time DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 3. 电子病历表
+CREATE TABLE medical_record (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    chief_complaint NVARCHAR(MAX),
+    present_illness NVARCHAR(MAX),
+    physical_exam NVARCHAR(MAX),
+    diagnosis NVARCHAR(500),
+    diagnosis_code NVARCHAR(50),
+    status NVARCHAR(20) DEFAULT N'进行中',
+    record_time DATETIME DEFAULT GETDATE(),
+    update_time DATETIME,
+    FOREIGN KEY (patient_id) REFERENCES patient(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctor(id)
+);
+GO
+
+-- 4. 处方表
+CREATE TABLE prescription (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    medical_record_id BIGINT,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    prescription_no NVARCHAR(50) UNIQUE NOT NULL,
+    drug_name NVARCHAR(100) NOT NULL,
+    specification NVARCHAR(100),
+    quantity INT DEFAULT 1,
+    usage_desc NVARCHAR(200),
+    dosage NVARCHAR(100),
+    duration INT,
+    unit_price DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    status NVARCHAR(20) DEFAULT N'待审核',
+    create_time DATETIME DEFAULT GETDATE(),
+    audit_time DATETIME,
+    audit_result NVARCHAR(50),
+    reject_reason NVARCHAR(500)
+);
+GO
+
+-- 5. 药品库存表
+CREATE TABLE drug_inventory (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    drug_code NVARCHAR(50) UNIQUE NOT NULL,
+    drug_name NVARCHAR(100) NOT NULL,
+    specification NVARCHAR(100),
+    manufacturer NVARCHAR(200),
+    current_stock INT DEFAULT 0,
+    min_stock INT DEFAULT 10,
+    max_stock INT DEFAULT 1000,
+    batch_no NVARCHAR(50),
+    production_date DATE,
+    expiry_date DATE,
+    purchase_price DECIMAL(10,2),
+    retail_price DECIMAL(10,2),
+    location NVARCHAR(50),
+    lock_quantity INT DEFAULT 0
+);
+GO
+
+-- 6. 收费记录表
+CREATE TABLE charge_record (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    patient_name NVARCHAR(50) NOT NULL,
+    charge_no NVARCHAR(50) UNIQUE NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    insurance_amount DECIMAL(10,2) DEFAULT 0,
+    personal_account DECIMAL(10,2) DEFAULT 0,
+    cash_amount DECIMAL(10,2) DEFAULT 0,
+    self_pay DECIMAL(10,2) DEFAULT 0,
+    payment_method NVARCHAR(20),
+    status NVARCHAR(20) DEFAULT N'待支付',
+    charge_time DATETIME,
+    invoice_no NVARCHAR(50),
+    insurance_serial_no NVARCHAR(50),
+    remark NVARCHAR(500)
+);
+GO
+
+-- 插入测试数据
+INSERT INTO patient (patient_no, name, gender, birthday, phone, allergy_history) VALUES
+('P1001', N'张三', N'男', '1990-01-15', '13800138001', N'青霉素过敏'),
+('P1002', N'李四', N'女', '1985-06-20', '13800138002', N'无'),
+('P1003', N'王五', N'男', '1978-12-10', '13800138003', N'磺胺类药物过敏');
+GO
+
+INSERT INTO doctor (doctor_no, name, department, title) VALUES
+('D001', N'张医生', N'内科', N'主任医师'),
+('D002', N'李医生', N'外科', N'主治医师');
+GO
+
+INSERT INTO drug_inventory (drug_code, drug_name, specification, manufacturer, current_stock, min_stock, retail_price, location) VALUES
+('D001', N'阿莫西林胶囊', N'0.5g*20粒', N'华北制药', 500, 50, 25.00, N'A-01-01'),
+('D002', N'布洛芬缓释胶囊', N'0.3g*24粒', N'中美史克', 300, 30, 35.00, N'A-01-02'),
+('D003', N'头孢克肟片', N'0.1g*12片', N'白云山制药', 200, 20, 45.00, N'A-01-03');
+GO
+
+INSERT INTO medical_record (patient_id, doctor_id, chief_complaint, status) VALUES
+(1, 1, N'发热、咳嗽3天', N'待接诊'),
+(2, 1, N'头痛、恶心2天', N'待接诊');
+GO
+
+PRINT '数据库创建完成！';
+GO
+
+
+--二.完善功能
+
+USE smart_medical;
+GO
+
+-- 1. 添加患者过敏史字段（如果已存在则跳过）
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'allergy_history' AND object_id = OBJECT_ID('patient'))
+BEGIN
+    ALTER TABLE patient ADD allergy_history NVARCHAR(MAX);
+END
+GO
+
+-- 2. 添加药品有效期预警字段
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'expiry_date' AND object_id = OBJECT_ID('drug_inventory'))
+BEGIN
+    ALTER TABLE drug_inventory ADD expiry_date DATE;
+    ALTER TABLE drug_inventory ADD production_date DATE;
+    ALTER TABLE drug_inventory ADD batch_no NVARCHAR(50);
+END
+GO
+
+-- 3. 创建发药记录表
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE name = 'dispense_record')
+BEGIN
+    CREATE TABLE dispense_record (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        prescription_id BIGINT NOT NULL,
+        pharmacist_id BIGINT NOT NULL,
+        patient_id BIGINT NOT NULL,
+        drug_name NVARCHAR(100),
+        quantity INT,
+        dispense_time DATETIME DEFAULT GETDATE(),
+        status NVARCHAR(20) DEFAULT N'已发药'
+    );
+END
+GO
+
+-- 4. 创建财务报表表
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE name = 'financial_report')
+BEGIN
+    CREATE TABLE financial_report (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        report_date DATE NOT NULL,
+        total_income DECIMAL(10,2) DEFAULT 0,
+        cash_amount DECIMAL(10,2) DEFAULT 0,
+        wechat_amount DECIMAL(10,2) DEFAULT 0,
+        alipay_amount DECIMAL(10,2) DEFAULT 0,
+        insurance_amount DECIMAL(10,2) DEFAULT 0,
+        created_time DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- 5. 更新药品库存添加测试过期数据
+UPDATE drug_inventory SET expiry_date = DATEADD(MONTH, 2, GETDATE()) WHERE id = 1;
+UPDATE drug_inventory SET expiry_date = DATEADD(MONTH, 6, GETDATE()) WHERE id = 2;
+UPDATE drug_inventory SET expiry_date = DATEADD(MONTH, 1, GETDATE()) WHERE id = 3;
+GO
+
+
+-- 解决重复患者数据
+
+USE smart_medical;
+GO
+
+-- 查看是否有重复数据
+SELECT patient_id, chief_complaint, status, COUNT(*) as cnt
+FROM medical_record
+WHERE status = '待接诊'
+GROUP BY patient_id, chief_complaint, status
+HAVING COUNT(*) > 1;
+GO
+
+-- 删除重复的待接诊记录（保留最早的一条）
+WITH cte AS (
+    SELECT *,
+        ROW_NUMBER() OVER (PARTITION BY patient_id ORDER BY record_time) as rn
+    FROM medical_record
+    WHERE status = '待接诊'
+)
+DELETE FROM cte WHERE rn > 1;
+GO
+
+-- 查看清理后的数据
+SELECT * FROM medical_record WHERE status = '待接诊';
+GO
+
+--三.修复药物库存
+
+-- 查看当前库存数据
+SELECT id, drug_name, current_stock, min_stock FROM drug_inventory;
+
+-- 更新测试数据：让一些药品真正库存不足
+-- 阿莫西林 500 > 50，实际不缺，但显示缺了？检查一下
+
+-- 如果所有药品库存都充足，暂时清空预警（让演示更干净）
+UPDATE drug_inventory SET current_stock = 100, min_stock = 50 WHERE id = 1;
+UPDATE drug_inventory SET current_stock = 80, min_stock = 50 WHERE id = 2;
+UPDATE drug_inventory SET current_stock = 60, min_stock = 50 WHERE id = 3;
+
+-- 查看结果
+SELECT drug_name, current_stock, min_stock, 
+       CASE WHEN current_stock < min_stock THEN '库存不足' ELSE '库存充足' END as status
+FROM drug_inventory;
+
+
+--四.
+-- 先查看当前数据
+SELECT drug_name, current_stock, min_stock, 
+       CASE WHEN current_stock < min_stock THEN '库存不足' ELSE '库存充足' END as status
+FROM drug_inventory;
+
+-- 如果全部充足，预警应该消失
+-- 为了演示效果，让一个药品真正不足
+UPDATE drug_inventory SET current_stock = 30, min_stock = 50 WHERE drug_name = '阿莫西林胶囊';
+
+-- 查看结果
+SELECT drug_name, current_stock, min_stock, 
+       CASE WHEN current_stock < min_stock THEN '⚠️ 库存不足' ELSE '✅ 库存充足' END as status
+FROM drug_inventory;
+
+
+--五.
+-- 更新所有药品库存，让预警逻辑正确
+UPDATE drug_inventory SET current_stock = 100, min_stock = 50 WHERE drug_name = '阿莫西林胶囊';
+UPDATE drug_inventory SET current_stock = 80, min_stock = 50 WHERE drug_name = '布洛芬缓释胶囊';
+UPDATE drug_inventory SET current_stock = 60, min_stock = 50 WHERE drug_name = '头孢克肟片';
+
+-- 为了让演示有效果，设置一个真正库存不足的药品
+UPDATE drug_inventory SET current_stock = 25, min_stock = 50 WHERE drug_name = '阿莫西林胶囊';
+
+-- 查看验证
+SELECT drug_name, current_stock, min_stock, 
+       CASE WHEN current_stock < min_stock THEN '⚠️ 库存不足' ELSE '✅ 库存充足' END as status
+FROM drug_inventory;
+
+
+--六.
+-- 查看患者2的结算单
+SELECT * FROM charge_record WHERE patient_id = 2;
+
+-- 删除患者2的错误结算单
+DELETE FROM charge_record WHERE patient_id = 2;
+
+--七
+-- 给 charge_record 表添加 prescription_id 字段，关联到具体处方
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'prescription_id' AND object_id = OBJECT_ID('charge_record'))
+BEGIN
+    ALTER TABLE charge_record ADD prescription_id BIGINT;
+END
+GO
+
+-- 查看现有数据
+SELECT id, patient_id, prescription_id, status FROM charge_record;
+GO

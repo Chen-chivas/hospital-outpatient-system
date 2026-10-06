@@ -1,0 +1,1 @@
+import{i as e,n as t}from"./index-DmQacnwT.js";function n(){return t(`/api/bills/my`)}function r(e){return t(`/api/bills${e?`?status=${encodeURIComponent(e)}`:``}`)}function i(e){return t(`/api/bills/${e}/items`)}function a(t,n){let r=n?{paymentMethod:n}:void 0;return e(`/api/bills/${t}/pay`,r)}export{a as i,r as n,n as r,i as t};

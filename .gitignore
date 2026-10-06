@@ -1,0 +1,35 @@
+# Java / Maven
+backend/target/
+
+# Backend local DB (H2 file mode)
+backend/.data/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Local caches / logs
+.npm_cache/
+*.log
+
+# ===== IDE / 编辑器 =====
+# IntelliJ IDEA：workspace.xml 每次操作都会变，多人协作必冲突，务必忽略
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code：保留推荐插件清单，忽略个人窗口状态
+.vscode/*
+!.vscode/extensions.json
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+
+# ===== 多个子项目的构建产物（兜底）=====
+outpatient/target/
+智慧医疗助手系统------就诊管理、药房管理、收费管理部分/smart-medical-system/target/
+
