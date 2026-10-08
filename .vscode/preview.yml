@@ -1,0 +1,29 @@
+# Cloud Studio 启动配置
+# 官方文档：https://cloudstudio.net/docs/guide/code_editing/basic_operations/how-to-run/
+#
+# 作用：配置好之后，在 Cloud Studio 里点顶部的「运行」按钮即可启动项目，
+#       无需在终端输入任何命令。团队所有成员克隆下来后都直接可用。
+#
+# 注意：port 字段必须保留，不要删除；留空则由系统自动识别端口。
+
+apps:
+  # Spring Boot 后端（同时托管已构建好的 Vue 前端）
+  - name: 医疗门诊挂号管理系统
+    port: 8080
+    root: ./backend
+    run: java -jar target/ocs-backend-0.1.0-SNAPSHOT.jar
+
+# ===== 首次使用前提 =====
+# 「运行」按钮只负责"启动"，不负责"构建"。首次克隆项目后需要先构建一次：
+#
+#     cd backend && mvn -DskipTests package
+#
+# 构建产物（target/ocs-backend-0.1.0-SNAPSHOT.jar）不进 git，
+# 所以每次在新环境首次使用都要构建一次；之后点「运行」即可直接启动。
+#
+# ===== 可选参数 =====
+# autoOpen: true      工作空间打开时自动运行该服务
+# autoPreview: true   启动后自动打开预览窗口
+# mainPort: true      设为主预览端口（"应用主页预览"场景生效）
+#
+# 如需加在下面这条配置里，与 name / port / root / run 同级缩进即可。

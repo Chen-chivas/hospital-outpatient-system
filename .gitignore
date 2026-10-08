@@ -19,9 +19,11 @@ frontend/dist/
 *.iws
 *.ipr
 
-# VS Code：保留推荐插件清单，忽略个人窗口状态
+# VS Code：忽略个人窗口状态，但保留团队共享的配置文件
+# extensions.json = 推荐插件清单；preview.yml = Cloud Studio 启动配置（团队共用，必须提交）
 .vscode/*
 !.vscode/extensions.json
+!.vscode/preview.yml
 
 # ===== 操作系统 =====
 .DS_Store
